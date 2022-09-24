@@ -4,12 +4,15 @@ from sqlite3 import connect
 
 import joblib
 import nltk
+import numpy as np
 import pandas as pd
+from sklearn import ensemble, neighbors, tree
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, classification_report
+from Grid import Grid
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 
 ## NLP
 from nltk.tokenize import word_tokenize
@@ -23,6 +26,12 @@ from sklearn.pipeline import Pipeline
 
 nltk.download('stopwords')
 
+def produceSample(train_set, sample_size):
+    np.random.seed(123)     ## this was used to produce the same every time
+    rating_indices = train_set.index
+    random_indices = np.random.choice(rating_indices, sample_size, replace=False)
+    rating1_sample = train_set.loc[random_indices]
+    return rating1_sample
 
 def load_data(database_filepath):
     '''
@@ -30,7 +39,10 @@ def load_data(database_filepath):
     '''
     conn = connect(database_filepath)
     df = pd.read_sql('SELECT * from comb_table', conn)
-    # print(df.head())
+    # print(df["related"].unique())
+    # dataframe[dataframe["column"] == value]
+    df = produceSample(df, 500)
+    # print(df)
     X = df["message"].values
     Y = df.drop(["index", "message", "original", "categories", "genre"], axis=1).values
     cols = df.drop(["index", "message", "original", "categories", "genre"], axis=1).columns
@@ -54,13 +66,18 @@ def tokenize(text):
     return words
 
 def build_model():
-    knn = KNeighborsClassifier(n_neighbors=36)
+    em_rf = ensemble.RandomForestClassifier()
+    nrn = neighbors.RadiusNeighborsClassifier()
+    knn = neighbors.KNeighborsClassifier()
+    en_ex_trees = ensemble.ExtraTreesClassifier()
+    trees = tree.ExtraTreeClassifier()
+    decision = tree.DecisionTreeClassifier()
+
     # build pipeline
     pipeline = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize)),
         ('tfidf', TfidfTransformer()),
-        # ('clf', MultiOutputClassifier(knn, n_jobs=-1))
-        ('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, random_state=42, max_iter=5, tol=None)),
+        ('clf', MultiOutputClassifier(knn, n_jobs=-1))
     ])
     return pipeline
 
@@ -75,18 +92,50 @@ def save_model(model, model_filepath):
     #save the model
     pickle.dump(model, open(model_filepath, 'wb'))
 
+def get_input():
+    prompt = 'Please input a number from 1-6 based on the multi-output multi-class classification model\n\n' \
+             '1:        ensemble.RandomForestClassifier()\n' \
+             '2:        neighbors.RadiusNeighborsClassifier()\n' \
+             '3:        neighbors.KNeighborsClassifier()\n' \
+             '4:        ensemble.ExtraTreesClassifier()\n' \
+             '5:        tree.ExtraTreeClassifier()\n' \
+             '6:        tree.DecisionTreeClassifier()\n\n'
+    num_input = input(prompt)
+    num_input = int(num_input)
+    return num_input
+
+def classify_ops(input, X_train, Y_train, X_test, Y_test, category_names):
+    model = Grid(X_train, Y_train, X_test, Y_test, category_names)
+    match input:
+        case 1:
+            model.rforest_classifier()
+        case 2:
+            model.nr_NeighborsClassifier()
+        case 3:
+            model.nr_NeighborsClassifier()
+        case 4:
+            model.ensemble_extra_Trees()
+        case 5:
+            model.extra_treeClassifier()
+        case 6:
+            model.decision_tree()
 
 def main():
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
+        input = get_input()
+        # print("You picked " + str(input))
+        input = 2
+        print("Selecting option 2 - will be building other options later....")
+
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
 
         X, Y, category_names = load_data(database_filepath)
+
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
-        # X_train_tok = []
-        # for i in X_train:
-        #     X_train_tok.append(tokenize(i))
-        
+
+        classify_ops(input, X_train, Y_train, X_test, Y_test, category_names)
+        return
         print('Building model...')
         model = build_model()
         
@@ -95,40 +144,43 @@ def main():
         
         print('Evaluating model...')
         evaluate_model(model, X_test, Y_test, category_names)
-
+        return
         print('Saving model...\n    MODEL: {}'.format(model_filepath))
         save_model(model, model_filepath)
 
         print('Trained model saved!')
 
-    if len(sys.argv) == 4:
-        import timeit
-        start = timeit.default_timer()
-        database_filepath, model_filepath, num = sys.argv[1:]
-        X, Y, category_names = load_data(database_filepath)
-        my_tags = category_names.tolist()
+    # if len(sys.argv) == 4:
+    #     import timeit
+    #     start = timeit.default_timer()
+    #     database_filepath, model_filepath, num = sys.argv[1:]
+    #     X, Y, category_names = load_data(database_filepath)
+    #     # print(X.head())
+    #     my_tags = category_names.tolist()
+    #
+    #     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
+    #     if
+    #     grid = Grid(2,3)
+    #     print(grid)
+    #     # print(X_train.shape)
+    #     # print(X_test.shape)
+    #     # print(Y_train[0])
+    #     # print("\n\n\n")
+    #     # print(Y_train)
+    #     return
+    #     # load the model from disk
+    #     loaded_model = joblib.load(model_filepath)
+    #     stop1 = timeit.default_timer()
+    #     print('Time: ', stop1 - start)
+    #
+    #     loaded_model.fit(X_train,Y_train)
+    #     Y_pred = loaded_model.predict(X_test)
+    #     print(Y_pred.shape)
+    #     stop2 = timeit.default_timer()
+    #     print('Time: ', stop2 - start)
 
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
-        print(X_train.shape)
-        print(X_test.shape)
-        print(Y_train[0])
-        print("\n\n\n")
-        print(Y_test.shape)
-        # return
-        # load the model from disk
-        loaded_model = joblib.load(model_filepath)
-        stop1 = timeit.default_timer()
-        print('Time: ', stop1 - start)
-
-        loaded_model.fit(X_train,Y_train)
-        Y_pred = loaded_model.predict(X_test)
-        print(Y_pred.shape)
-        stop2 = timeit.default_timer()
-        print('Time: ', stop2 - start)
-        print('accuracy %s' % accuracy_score(Y_pred, Y_test))
-        print(classification_report(Y_test, Y_pred, target_names=my_tags))
-
-        # print(result)
+    #
+    #     # print(result)
     else:
         print('Please provide the filepath of the disaster messages database '\
               'as the first argument and the filepath of the pickle file to '\
