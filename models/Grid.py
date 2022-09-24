@@ -35,7 +35,7 @@ class Grid:
         print('accuracy %s' % accuracy_score(y_pred, self.y_test))
         print(classification_report(self.y_test, y_pred, target_names=self.my_tags))
 
-    def tokenize(text):
+    def tokenise(self, text):
         import re
         regex = re.compile('[\'&*:#,\.!?-_-\$/()\d+]')  # remove punctuation, special chars and digits
         text = regex.sub('', text)
@@ -52,7 +52,7 @@ class Grid:
 
     def createPipeline(self, classifier):
         pipeline = Pipeline([
-            ('vect', CountVectorizer(tokenizer=self.tokenize)),
+            ('vect', CountVectorizer(tokenizer=self.tokenise)),
             ('tfidf', TfidfTransformer()),
             ('clf', MultiOutputClassifier(classifier, n_jobs=-1))
         ])
@@ -71,9 +71,9 @@ class Grid:
         grid = dict()
         grid['model__radius'] = arange(0.8, 1.5, 0.01)
         pipeline = self.createPipeline(model)
-        search = GridSearchCV(pipeline, grid, scoring='accuracy', cv=cv, n_jobs=-1)
-        self.eval(search)
-        return search
+        # search = GridSearchCV(pipeline, grid, scoring='accuracy', cv=cv, n_jobs=-1)
+        self.eval(pipeline)
+        # return search
 
     def rnClassifier(self):
         model = neighbors.KNeighborsClassifier()
