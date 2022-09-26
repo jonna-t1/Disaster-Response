@@ -1,0 +1,6 @@
+rf = 0.22
+rnn accuracy 0.18 (radius 3.0)
+knn = 0.14
+en_xt = accuracy 0.21
+xt = accuracy 0.09
+dt = accuracy 0.11

@@ -1,4 +1,6 @@
 import json
+
+import nltk
 import plotly
 import pandas as pd
 
@@ -12,6 +14,8 @@ from plotly.graph_objs import Bar
 import joblib
 from sqlalchemy import create_engine
 
+nltk.download('wordnet')
+nltk.download('omw-1.4')
 app = Flask(__name__)
 
 def tokenize(text):
@@ -27,7 +31,7 @@ def tokenize(text):
 
 # load data
 engine = create_engine('sqlite:///../data/DisasterResponse.db')
-df = pd.read_sql_table('Messages', engine)
+df = pd.read_sql_table("comb_table", engine)
 
 # load model
 model = joblib.load("../models/classifier.pkl")
@@ -42,7 +46,8 @@ def index():
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
-    
+
+    print(genre_counts)
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
     graphs = [
@@ -69,7 +74,7 @@ def index():
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
-    
+
     # render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
 
@@ -77,6 +82,7 @@ def index():
 # web page that handles user query and displays model results
 @app.route('/go')
 def go():
+
     # save user input in query
     query = request.args.get('query', '') 
 

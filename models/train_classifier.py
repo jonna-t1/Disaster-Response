@@ -39,14 +39,25 @@ def load_data(database_filepath):
     '''
     conn = connect(database_filepath)
     df = pd.read_sql('SELECT * from comb_table', conn)
+    # print(df.iloc[:, 5:].columns)
+    # for col in df.iloc[:, 5:].columns:
+    #     df[col] = df[col].astype(int)
     # print(df["related"].unique())
     # dataframe[dataframe["column"] == value]
     df = produceSample(df, 500)
     # print(df)
     X = df["message"].values
-    Y = df.drop(["index", "message", "original", "categories", "genre"], axis=1).values
     cols = df.drop(["index", "message", "original", "categories", "genre"], axis=1).columns
-    # print(Y.head())
+
+    df = df.drop(["index", "message", "original", "categories", "genre"], axis=1)
+    df = df.replace('2','0')
+
+    for col in cols:
+        print(col + ": "+ str(df[col].unique()))
+        df[col] = df[col].astype(int)
+    Y = df.values
+    # print(Y["related"].unique())
+
     return X, Y, cols
 
 
@@ -66,25 +77,28 @@ def tokenize(text):
     return words
 
 def build_model():
-    em_rf = ensemble.RandomForestClassifier()
-    nrn = neighbors.RadiusNeighborsClassifier()
+    rf = ensemble.RandomForestClassifier()
+    rnn = neighbors.RadiusNeighborsClassifier(radius=3.0)
     knn = neighbors.KNeighborsClassifier()
-    en_ex_trees = ensemble.ExtraTreesClassifier()
-    trees = tree.ExtraTreeClassifier()
-    decision = tree.DecisionTreeClassifier()
-
+    en_xt = ensemble.ExtraTreesClassifier()
+    xt = tree.ExtraTreeClassifier()
+    dt = tree.DecisionTreeClassifier()
     # build pipeline
     pipeline = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize)),
         ('tfidf', TfidfTransformer()),
-        ('clf', MultiOutputClassifier(knn, n_jobs=-1))
+        ('clf', MultiOutputClassifier(rf, n_jobs=-1))
     ])
     return pipeline
 
-
-def evaluate_model(model, X_test, Y_test, category_names):
+# Report the f1 score, precision and recall for each output category of the dataset. You can do this by iterating through
+# the columns and calling sklearn's classification_report on each.
+def evaluate_model(model, X_test, y_test, category_names, results):
     # print("SGD/LogReg Accuracy on new training set: {:.3f}".format(model.score(X_new, y_new)))
-    print("SGD/LogReg Accuracy on original test set: {:.3f}".format(model.score(X_test, Y_test)))
+    print("SGD/LogReg Accuracy on original test set: {:.3f}".format(model.score(X_test, y_test)))
+    y_pred = results.predict(X_test)
+    print('accuracy %s' % accuracy_score(y_pred, y_test))
+    print(classification_report(y_test, y_pred, target_names=category_names))
     pass
 
 
@@ -123,7 +137,7 @@ def classify_ops(input, X_train, Y_train, X_test, Y_test, category_names):
 def main():
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
-        input = get_input()
+        # input = get_input()
         # print("You picked " + str(input))
         input = 2
         print("Selecting option 2 - will be building other options later....")
@@ -131,20 +145,19 @@ def main():
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
 
         X, Y, category_names = load_data(database_filepath)
-
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
 
-        classify_ops(input, X_train, Y_train, X_test, Y_test, category_names)
-        return
+        # classify_ops(input, X_train, Y_train, X_test, Y_test, category_names)
+        # return
         print('Building model...')
         model = build_model()
         
         print('Training model...')
-        model.fit(X_train, Y_train)
+        results = model.fit(X_train, Y_train)
         
         print('Evaluating model...')
-        evaluate_model(model, X_test, Y_test, category_names)
-        return
+        evaluate_model(model, X_test, Y_test, category_names, results)
+        # return
         print('Saving model...\n    MODEL: {}'.format(model_filepath))
         save_model(model, model_filepath)
 
