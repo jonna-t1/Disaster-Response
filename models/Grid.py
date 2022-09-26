@@ -5,8 +5,12 @@ from sklearn import ensemble, neighbors, tree
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import GridSearchCV, RepeatedStratifiedKFold
-from sklearn.multioutput import MultiOutputClassifier
+# from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import Pipeline
+
+"""
+TODO: implement this in future versions
+"""
 
 
 def tokenise(text):

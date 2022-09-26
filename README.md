@@ -10,6 +10,26 @@ will classify new messages for 36 categories.
 During natural disasters it can become difficult to filter out key information which the responder can use which this 
 application hopes to address.
 
+### Files in the project
+```bash
+app
+| - template 
+| |- master.html # main page of web app
+| |- go.html # classification result page of web app
+|- requirements.txt # requirements for the project 
+|- run.py # Flask file that runs app
+data
+|- disaster_categories.csv # data to process
+|- disaster_messages.csv # data to process
+|- process_data.py
+|- DisasterResponse.db # database to save clean data to
+models
+|- query_data.py # database query to get an idea of table contents
+|- Grid.py # A class that makes model selection easier. Not used in the current version
+|- train_classifier.py # script that saves ML classifier
+|- classifier.pkl # saved model
+README.md
+```
 ### Instructions:
 1. Run the following commands in the project's root directory to set up your database and model.
 
